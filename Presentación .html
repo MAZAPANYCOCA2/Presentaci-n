@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presentación - Relación Cliente Servidor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tahoma:wght@400;700&display=swap');
+
+  :root {
+    --xp-blue: #003399;
+    --xp-title-bar: linear-gradient(180deg, #1c6eb4 0%, #0a3d8f 40%, #0952bb 60%, #1168c8 100%);
+    --xp-button: linear-gradient(180deg, #f5f5f5 0%, #dfdfdf 50%, #c8c8c8 100%);
+    --xp-green: #008000;
+    --xp-taskbar: linear-gradient(180deg, #245edc 0%, #1449c3 100%);
+    --xp-start: linear-gradient(90deg, #3b9a3b 0%, #2d8a2d 100%);
+    --bg-desktop: #3a6ea5;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Tahoma, 'MS Sans Serif', Arial, sans-serif;
+  }
+
+  body {
+    background: var(--bg-desktop);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Desktop icons */
+  .desktop-bg {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-desktop);
+    z-index: 0;
+  }
+
+  /* Scanline effect */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Main window */
+  .window {
+    width: 900px;
+    max-width: 98vw;
+    height: 85vh;
+    min-height: 520px;
+    background: #ece9d8;
+    border: 3px solid #0831d9;
+    border-radius: 8px 8px 4px 4px;
+    box-shadow: 
+      inset 1px 1px 0 rgba(255,255,255,0.8),
+      4px 4px 20px rgba(0,0,0,0.5),
+      0 0 0 1px #000;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 10;
+  }
+
+  /* Title bar */
+  .title-bar {
+    background: var(--xp-title-bar);
+    border-radius: 6px 6px 0 0;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+  }
+
+  .title-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .title-bar-icon {
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(135deg, #ffcc00, #ff9900);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+
+  .title-bar-text {
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+
+  .title-bar-buttons {
+    display: flex;
+    gap: 2px;
+  }
+
+  .tb-btn {
+    width: 21px;
+    height: 21px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #000;
+    text-shadow: none;
+  }
+
+  .tb-btn.minimize { background: linear-gradient(180deg, #f5c842 0%, #e8a800 100%); }
+  .tb-btn.maximize { background: linear-gradient(180deg, #64d056 0%, #3aaf2d 100%); }
+  .tb-btn.close { background: linear-gradient(180deg, #f55 0%, #cc0000 100%); color: white; }
+
+  /* Menu bar */
+  .menu-bar {
+    background: #ece9d8;
+    padding: 2px 8px;
+    border-bottom: 1px solid #b0b0b0;
+    display: flex;
+    gap: 4px;
+  }
+
+  .menu-item {
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  .menu-item:hover { background: #316ac5; color: white; }
+
+  /* Slide container */
+  .slide-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: #ece9d8;
+  }
+
+  .slide {
+    display: none;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    position: absolute;
+    inset: 0;
+  }
+
+  .slide.active { display: flex; flex-direction: column; }
+
+  /* Slide header */
+  .slide-header {
+    background: var(--xp-title-bar);
+    padding: 10px 20px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .slide-num {
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .slide-title {
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+  }
+
+  /* Slide body */
+  .slide-body {
+    flex: 1;
+    padding: 14px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* XP-style info box */
+  .info-box {
+    background: #fff;
+    border: 2px inset #a0a0a0;
+    border-radius: 2px;
+    padding: 10px 14px;
+  }
+
+  .info-box p {
+    font-size: 13px;
+    color: #000;
+    line-height: 1.6;
+  }
+
+  /* Section title */
+  .section-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #003399;
+    border-bottom: 2px solid #003399;
+    padding-bottom: 3px;
+    margin-bottom: 6px;
+  }
+
+  /* Key concept panel */
+  .key-panel {
+    background: #fff;
+    border: 2px solid #316ac5;
+    border-radius: 4px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .key-panel .icon {
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .key-panel .content { flex: 1; }
+  .key-panel .label { font-size: 11px; font-weight: bold; color: #316ac5; text-transform: uppercase; letter-spacing: 0.5px; }
+  .key-panel .value { font-size: 13px; color: #000; margin-top: 2px; line-height: 1.5; }
+
+  /* Two column */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Card */
+  .card {
+    background: #fff;
+    border: 2px solid #7a96df;
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #003399;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #7a96df;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .card p {
+    font-size: 12px;
+    color: #222;
+    line-height: 1.5;
+  }
+
+  /* Flowchart */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    background: #f0f4ff;
+    border: 1px solid #7a96df;
+    border-radius: 4px;
+    flex-wrap: wrap;
+  }
+
+  .flow-node {
+    background: var(--xp-title-bar);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #001a80;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .flow-arrow {
+    font-size: 18px;
+    color: #003399;
+    font-weight: bold;
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    background: #316ac5;
+    color: white;
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 10px;
+    font-weight: bold;
+    margin-left: 4px;
+  }
+
+  /* Steps */
+  .steps { display: flex; flex-direction: column; gap: 6px; }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #b0b8d0;
+    border-radius: 3px;
+    padding: 6px 10px;
+  }
+
+  .step-num {
+    background: #316ac5;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .step-text { font-size: 12px; color: #000; line-height: 1.5; }
+  .step-text strong { color: #003399; }
+
+  /* Table */
+  .xp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    border: 2px inset #a0a0a0;
+  }
+
+  .xp-table thead tr {
+    background: var(--xp-title-bar);
+    color: white;
+  }
+
+  .xp-table thead th {
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 12px;
+    border-right: 1px solid rgba(255,255,255,0.3);
+  }
+
+  .xp-table tbody tr:nth-child(even) { background: #e8ecff; }
+  .xp-table tbody tr:nth-child(odd) { background: #fff; }
+  .xp-table tbody td {
+    padding: 6px 10px;
+    border-right: 1px solid #c0c8e0;
+    border-bottom: 1px solid #c0c8e0;
+    vertical-align: top;
+  }
+
+  /* Code / URL style */
+  .code {
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 2px;
+    border: 1px solid #333;
+  }
+
+  /* Intro / Outro special */
+  .intro-body {
+    background: linear-gradient(135deg, #001a80 0%, #0040cc 50%, #0033aa 100%);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .intro-body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.04) 0%, transparent 50%);
+  }
+
+  .intro-logo {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #ff9900, #ffcc00);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin-bottom: 16px;
+    box-shadow: 0 0 30px rgba(255,165,0,0.5), 0 0 60px rgba(255,165,0,0.2);
+    border: 3px solid rgba(255,255,255,0.3);
+    position: relative;
+  }
+
+  .intro-main-title {
+    color: white;
+    font-size: 26px;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+    margin-bottom: 6px;
+    position: relative;
+  }
+
+  .intro-subtitle {
+    color: #aaccff;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .presenters-box {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    padding: 12px 24px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .presenters-title {
+    color: #ffcc00;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .presenters-names {
+    color: white;
+    font-size: 15px;
+    text-align: center;
+    font-weight: bold;
+  }
+
+  .xp-badge-row {
+    display: flex;
+    gap: 8px;
+    position: relative;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .xp-chip {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: white;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  /* Outro */
+  .outro-body {
+    background: linear-gradient(135deg, #001a80, #0040cc, #001a80);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .outro-icon { font-size: 60px; margin-bottom: 12px; }
+
+  .outro-title {
+    color: #ffcc00;
+    font-size: 30px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 6px;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+  }
+
+  .outro-subtitle {
+    color: white;
+    font-size: 16px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .outro-names {
+    color: #aaccff;
+    font-size: 13px;
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 10px 20px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    background: #ece9d8;
+    border-top: 1px solid #a0a0a0;
+    padding: 3px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .status-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-section {
+    border: 1px inset #a0a0a0;
+    padding: 1px 8px;
+    font-size: 11px;
+    color: #333;
+    background: #fff;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  /* Navigation */
+  .nav-bar {
+    background: #ece9d8;
+    border-top: 2px solid #a0a0a0;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .nav-btn {
+    background: var(--xp-button);
+    border: 2px outset #c0c0c0;
+    border-radius: 3px;
+    padding: 4px 16px;
+    font-size: 12px;
+    font-family: Tahoma, sans-serif;
+    cursor: pointer;
+    color: #000;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .nav-btn:hover {
+    background: linear-gradient(180deg, #e8f0ff 0%, #ccd8f5 100%);
+    border-color: #316ac5;
+  }
+
+  .nav-btn:active {
+    border-style: inset;
+    background: linear-gradient(180deg, #b0c0e0 0%, #c0d0f0 100%);
+  }
+
+  .nav-btn:disabled {
+    color: #a0a0a0;
+    cursor: default;
+  }
+
+  .slide-counter {
+    font-size: 12px;
+    color: #333;
+    border: 1px inset #a0a0a0;
+    background: #fff;
+    padding: 3px 12px;
+    min-width: 90px;
+    text-align: center;
+  }
+
+  /* Progress bar */
+  .progress-track {
+    flex: 1;
+    max-width: 200px;
+    height: 8px;
+    background: #c0c0c0;
+    border: 1px inset #888;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #316ac5, #5588dd);
+    transition: width 0.3s;
+    border-radius: 2px;
+  }
+
+  /* Taskbar */
+  .taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: var(--xp-taskbar);
+    border-top: 2px solid #1c68dc;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    gap: 4px;
+    z-index: 100;
+    box-shadow: 0 -1px 0 rgba(0,0,0,0.3);
+  }
+
+  .start-btn {
+    background: var(--xp-start);
+    border: 1px solid #1a6b1a;
+    border-radius: 10px;
+    padding: 3px 12px 3px 8px;
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
+  .taskbar-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255,255,255,0.2);
+    margin: 0 4px;
+  }
+
+  .taskbar-app {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 3px;
+    padding: 2px 10px;
+    color: white;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .taskbar-app.active {
+    background: rgba(0,0,0,0.2);
+    border-style: inset;
+  }
+
+  .taskbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,80,0.4);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 2px;
+    padding: 2px 8px;
+    color: white;
+    font-size: 11px;
+  }
+
+  /* Highlight */
+  .highlight {
+    background: #fffacd;
+    border-left: 3px solid #ffcc00;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 0 3px 3px 0;
+  }
+
+  /* URI diagram */
+  .uri-diagram {
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    padding: 12px;
+    border-radius: 3px;
+    text-align: center;
+    position: relative;
+  }
+
+  .uri-part {
+    display: inline-block;
+    padding: 2px 4px;
+    border-radius: 2px;
+    margin: 0 1px;
+  }
+
+  .uri-protocol { background: rgba(255,100,100,0.3); color: #ff8888; }
+  .uri-host { background: rgba(100,255,100,0.3); color: #88ff88; }
+  .uri-path { background: rgba(100,100,255,0.3); color: #8888ff; }
+  .uri-fragment { background: rgba(255,255,100,0.3); color: #ffff88; }
+
+  .uri-legend {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #555;
+  }
+
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid #999;
+  }
+
+  /* Scrollbar XP style */
+  ::-webkit-scrollbar { width: 16px; }
+  ::-webkit-scrollbar-track { background: #f0f0f0; border-left: 1px solid #c0c0c0; }
+  ::-webkit-scrollbar-thumb { background: #c0c8d8; border: 1px solid #8898b8; }
+  ::-webkit-scrollbar-button { background: #d4d0c8; height: 16px; border: 1px outset #c0c0c0; display: block; }
+
+  .alert-box {
+    background: #fffbe6;
+    border: 1px solid #e6c700;
+    border-radius: 3px;
+    padding: 7px 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .alert-icon { font-size: 16px; flex-shrink: 0; }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  .cursor { animation: blink 1s infinite; }
+
+</style>
+</head>
+<body>
+
+<div class="desktop-bg"></div>
+
+<!-- Main Window -->
+<div class="window">
+  <!-- Title Bar -->
+  <div class="title-bar">
+    <div class="title-bar-left">
+      <div class="title-bar-icon">🖥</div>
+      <span class="title-bar-text">Módulo 16 - La Relación Cliente Servidor.ppt — Microsoft PowerPoint 2003</span>
+    </div>
+    <div class="title-bar-buttons">
+      <div class="tb-btn minimize">_</div>
+      <div class="tb-btn maximize">□</div>
+      <div class="tb-btn close">✕</div>
+    </div>
+  </div>
+
+  <!-- Menu Bar -->
+  <div class="menu-bar">
+    <span class="menu-item">Archivo</span>
+    <span class="menu-item">Edición</span>
+    <span class="menu-item">Ver</span>
+    <span class="menu-item">Insertar</span>
+    <span class="menu-item">Formato</span>
+    <span class="menu-item">Presentación</span>
+    <span class="menu-item">Ayuda</span>
+  </div>
+
+  <!-- Slides -->
+  <div class="slide-container">
+
+    <!-- SLIDE 1: INTRO -->
+    <div class="slide active" id="slide-1">
+      <div class="intro-body">
+        <div class="intro-logo">🌐</div>
+        <div class="intro-main-title">La Relación Cliente-Servidor</div>
+        <div class="intro-subtitle">Módulo 16.1 — Redes y Comunicaciones</div>
+        <div class="presenters-box">
+          <div class="presenters-title">👤 Presentado por</div>
+          <div class="presenters-names">Carlos González &nbsp;|&nbsp; Ivana Díaz</div>
+        </div>
+        <div class="xp-badge-row">
+          <span class="xp-chip">📡 Protocolo IP</span>
+          <span class="xp-chip">🖥 DNS &amp; HTTP</span>
+          <span class="xp-chip">🔗 URI / URL</span>
+          <span class="xp-chip">🔁 TCP/IP</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Interacción Cliente-Servidor (concepto) -->
+    <div class="slide" id="slide-2">
+      <div class="slide-header">
+        <span class="slide-num">16.1</span>
+        <span class="slide-title">La Relación Cliente-Servidor</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">¿Qué es el modelo Cliente-Servidor?</div>
+        <div class="info-box">
+          <p>Cada vez que usamos internet — para enviar un correo, revisar redes sociales o comprar en línea — interactuamos con <strong>servidores</strong> y <strong>clientes</strong> sin darnos cuenta. Estas interacciones complejas son posibles gracias a <strong>estándares y protocolos acordados</strong>.</p>
+        </div>
+        <div class="two-col">
+          <div class="key-panel">
+            <div class="icon">🖥</div>
+            <div class="content">
+              <div class="label">Servidor</div>
+              <div class="value">Host que ejecuta una aplicación que <strong>proporciona información o servicios</strong> a otros hosts conectados a la red. Ej: servidor web, de correo, de archivos.</div>
+            </div>
+          </div>
+          <div class="key-panel">
+            <div class="icon">💻</div>
+            <div class="content">
+              <div class="label">Cliente</div>
+              <div class="value">Host que <strong>solicita servicios</strong> al servidor. Ej: un navegador web (Chrome, Firefox), cliente de correo (Outlook), Explorador de Archivos.</div>
+            </div>
+          </div>
+        </div>
+        <div class="flow">
+          <div class="flow-node">💻 Cliente</div>
+          <div class="flow-arrow">⇌</div>
+          <div class="flow-node">☁️ Internet</div>
+          <div class="flow-arrow">⇌</div>
+          <div class="flow-node">🖥 Servidor</div>
+        </div>
+        <div class="highlight">💡 Una misma PC puede ejecutar <strong>varios tipos de software cliente</strong> al mismo tiempo: navegador, correo, mensajería y streaming de audio.</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Tipos de servidor -->
+    <div class="slide" id="slide-3">
+      <div class="slide-header">
+        <span class="slide-num">16.1.1</span>
+        <span class="slide-title">Tipos de Servidores Comunes</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">Tabla: Tipos de Software de Servidor</div>
+        <table class="xp-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Función del Servidor</th>
+              <th>Software de Cliente</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>📧 Correo Electrónico</strong></td>
+              <td>Ejecuta software de servidor de correo. Almacena y gestiona mensajes de email para los usuarios.</td>
+              <td>Microsoft Outlook, Thunderbird u otro cliente de correo.</td>
+            </tr>
+            <tr>
+              <td><strong>🌐 Web</strong></td>
+              <td>Ejecuta software de servidor web. Aloja y entrega páginas web a los clientes que las solicitan.</td>
+              <td>Navegadores: Chrome, Firefox, Edge.</td>
+            </tr>
+            <tr>
+              <td><strong>📁 Archivo</strong></td>
+              <td>Almacena archivos de usuarios y empresas en una ubicación centralizada y segura.</td>
+              <td>Explorador de Archivos de Windows u otro software de gestión de archivos.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="three-col" style="margin-top:8px;">
+          <div class="card">
+            <div class="card-title">📧 Servidor de Correo</div>
+            <p>Millones de mensajes diarios pasan por servidores SMTP/IMAP/POP3 en todo el mundo.</p>
+          </div>
+          <div class="card">
+            <div class="card-title">🌐 Servidor Web</div>
+            <p>Hay millones de servidores en internet: sitios web, finanzas, streaming, descargas.</p>
+          </div>
+          <div class="card">
+            <div class="card-title">📁 Servidor de Archivos</div>
+            <p>Centraliza el almacenamiento de datos para empresas, permitiendo acceso remoto seguro.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Interacciones IP cliente-servidor -->
+    <div class="slide" id="slide-4">
+      <div class="slide-header">
+        <span class="slide-num">16.1.2</span>
+        <span class="slide-title">Interacciones de IP: Cliente y Servidor Web</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">¿Cómo accede un cliente a un servidor web?</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-text">El usuario escribe <strong>www.learnip.com</strong> en el navegador. La URL debe traducirse a una <strong>dirección IP</strong>, ya que las redes procesan IPs, no nombres de dominio.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text"><strong>Búsqueda DNS:</strong> Se envía una solicitud al servidor DNS, que devuelve la IP asociada al dominio. Ej: <code style="background:#eee;padding:1px 4px;">172.16.10.50</code></div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-text"><strong>Conexión TCP:</strong> Se crea una conexión entre el cliente <code style="background:#eee;padding:1px 4px;">192.168.10.15:5507</code> y el servidor <code style="background:#eee;padding:1px 4px;">172.16.10.50:80</code></div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-text">El servidor web <strong>escucha en el puerto 80 (TCP)</strong>. Recibe la solicitud, la procesa y envía la página web de regreso al cliente.</div>
+          </div>
+        </div>
+        <div class="code">
+          SOCKET: 192.168.10.15:5507  ⇌  172.16.10.50:80<span class="cursor">_</span>
+        </div>
+        <div class="alert-box">
+          <span class="alert-icon">⚠️</span>
+          <span>El <strong>socket</strong> es el identificador único de toda la conversación. Todos los paquetes de esa sesión tienen la misma info de origen y destino, permitiendo su seguimiento en la red.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: DNS explicado -->
+    <div class="slide" id="slide-5">
+      <div class="slide-header">
+        <span class="slide-num">16.1.2</span>
+        <span class="slide-title">El Proceso DNS y el Socket TCP</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">DNS: El "directorio telefónico" de Internet</div>
+        <div class="two-col">
+          <div>
+            <div class="info-box">
+              <p><strong>¿Por qué DNS?</strong><br>Las redes solo procesan <strong>direcciones IP</strong>, no nombres de dominio. El DNS traduce <code style="background:#eee;">www.learnip.com</code> → <code style="background:#eee;">172.16.10.50</code></p>
+            </div>
+            <div style="margin-top:8px;" class="steps">
+              <div class="step">
+                <div class="step-num">①</div>
+                <div class="step-text">Cliente envía consulta DNS para <strong>www.learnip.com</strong></div>
+              </div>
+              <div class="step">
+                <div class="step-num">②</div>
+                <div class="step-text">Servidor DNS responde con IP: <strong>172.16.10.50</strong></div>
+              </div>
+              <div class="step">
+                <div class="step-num">③</div>
+                <div class="step-text">Cliente usa la IP para crear el paquete y la conexión TCP</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Anatomía del Socket</div>
+            <table class="xp-table">
+              <thead><tr><th>Campo</th><th>Valor Ejemplo</th></tr></thead>
+              <tbody>
+                <tr><td>IP Origen (Cliente)</td><td>192.168.10.15</td></tr>
+                <tr><td>Puerto Origen</td><td>5507 (aleatorio &gt;1024)</td></tr>
+                <tr><td>IP Destino (Servidor)</td><td>172.16.10.50</td></tr>
+                <tr><td>Puerto Destino</td><td>80 (HTTP)</td></tr>
+              </tbody>
+            </table>
+            <div class="highlight" style="margin-top:8px;">💡 El servidor web <strong>escucha en el puerto 80</strong>. Los puertos aleatorios del cliente son siempre <strong>mayores a 1024</strong>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Paquetes y respuesta del servidor -->
+    <div class="slide" id="slide-6">
+      <div class="slide-header">
+        <span class="slide-num">16.1.2</span>
+        <span class="slide-title">Flujo Completo de Comunicación Web</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">Del cliente al servidor y de vuelta</div>
+        <div class="flow">
+          <div class="flow-node">💻 Cliente<br><small>192.168.10.15:5507</small></div>
+          <div class="flow-arrow">→ HTTP Request →</div>
+          <div class="flow-node">☁️ Internet<br><small>Routers / Firewalls</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">🖥 Servidor Web<br><small>172.16.10.50:80</small></div>
+        </div>
+        <div class="flow" style="margin-top:6px;">
+          <div class="flow-node">💻 Cliente<br><small>recibe página web</small></div>
+          <div class="flow-arrow">← HTTP Response ←</div>
+          <div class="flow-node">☁️ Internet</div>
+          <div class="flow-arrow">←</div>
+          <div class="flow-node">🖥 Servidor Web<br><small>envía respuesta</small></div>
+        </div>
+        <div class="info-box" style="margin-top:8px;">
+          <p>Todos los paquetes de una misma conversación comparten la <strong>misma información de socket</strong> (IP origen:puerto ⇌ IP destino:puerto). Esto permite que routers, firewalls y otros dispositivos identifiquen que pertenecen a la misma sesión, incluso viajando por internet.</p>
+        </div>
+        <div class="two-col" style="margin-top:6px;">
+          <div class="card">
+            <div class="card-title">📤 Solicitud del Cliente</div>
+            <p>Origen: 192.168.10.15:5507 → Destino: 172.16.10.50:80. Contiene la solicitud HTTP de la página web.</p>
+          </div>
+          <div class="card">
+            <div class="card-title">📥 Respuesta del Servidor</div>
+            <p>Origen: 172.16.10.50:80 → Destino: 192.168.10.15:5507. Contiene el HTML de la página solicitada.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: URI URN URL -->
+    <div class="slide" id="slide-7">
+      <div class="slide-header">
+        <span class="slide-num">16.1.3</span>
+        <span class="slide-title">URI, URN y URL</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">Identificación de Recursos en la Web</div>
+        <div class="uri-diagram">
+          <div>
+            <span class="uri-part uri-protocol">https://</span><span class="uri-part uri-host">www.example.com</span><span class="uri-part uri-path">/author/book.html</span><span class="uri-part uri-fragment">#page155</span>
+          </div>
+          <div class="uri-legend">
+            <div class="legend-item"><div class="legend-color" style="background:rgba(255,100,100,0.5);"></div> Protocolo/Esquema</div>
+            <div class="legend-item"><div class="legend-color" style="background:rgba(100,255,100,0.5);"></div> Hostname</div>
+            <div class="legend-item"><div class="legend-color" style="background:rgba(100,100,255,0.5);"></div> Ruta/Archivo</div>
+            <div class="legend-item"><div class="legend-color" style="background:rgba(255,255,100,0.5);"></div> Fragmento</div>
+          </div>
+        </div>
+        <div class="two-col" style="margin-top:8px;">
+          <div class="key-panel">
+            <div class="icon">🏷</div>
+            <div class="content">
+              <div class="label">URI — Identificador Uniforme de Recursos</div>
+              <div class="value">Cadena de caracteres que <strong>identifica un recurso de red</strong>. Es el concepto más amplio. Engloba tanto URL como URN.</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="key-panel">
+              <div class="icon">📛</div>
+              <div class="content">
+                <div class="label">URN — Nombre Uniforme de Recurso</div>
+                <div class="value">Identifica solo el <strong>espacio de nombres</strong> del recurso, sin referencia al protocolo.</div>
+              </div>
+            </div>
+            <div class="key-panel">
+              <div class="icon">📍</div>
+              <div class="content">
+                <div class="label">URL — Localizador Uniforme de Recursos</div>
+                <div class="value">Define la <strong>ubicación de red</strong> de un recurso. Incluye protocolo, host, ruta. Ej: https://, ftp://, sftp://</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Partes de un URI -->
+    <div class="slide" id="slide-8">
+      <div class="slide-header">
+        <span class="slide-num">16.1.3</span>
+        <span class="slide-title">Partes de un URI</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">Desglose de un URI completo</div>
+        <div class="uri-diagram" style="font-size:16px; padding:16px;">
+          <span class="uri-part uri-protocol">https://</span><span class="uri-part uri-host">www.example.com</span><span class="uri-part uri-path">/author/book.html</span><span class="uri-part uri-fragment">#page155</span>
+        </div>
+        <table class="xp-table" style="margin-top:8px;">
+          <thead>
+            <tr>
+              <th>Componente</th>
+              <th>Ejemplo</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Protocolo/Esquema</strong></td>
+              <td><code>https://</code></td>
+              <td>Define el protocolo de comunicación: HTTPS, HTTP, FTP, SFTP, mailto, NNTP.</td>
+            </tr>
+            <tr>
+              <td><strong>Nombre de Host</strong></td>
+              <td><code>www.example.com</code></td>
+              <td>Nombre de dominio o IP del servidor que aloja el recurso.</td>
+            </tr>
+            <tr>
+              <td><strong>Ruta y Nombre de Archivo</strong></td>
+              <td><code>/author/book.html</code></td>
+              <td>Ubicación específica del recurso dentro del servidor.</td>
+            </tr>
+            <tr>
+              <td><strong>Fragmento</strong></td>
+              <td><code>#page155</code></td>
+              <td>Apunta a una sección específica dentro del recurso (ancla).</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="highlight" style="margin-top:8px;">💡 La <strong>URL</strong> incluye: protocolo + host + ruta. La <strong>URN</strong> incluye solo: host + ruta (sin protocolo). El <strong>fragmento</strong> no viaja al servidor, solo lo usa el navegador.</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: Packet Tracer intro -->
+    <div class="slide" id="slide-9">
+      <div class="slide-header">
+        <span class="slide-num">16.1.4</span>
+        <span class="slide-title">Tráfico Web en Packet Tracer</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">Simulación de tráfico HTTP con Packet Tracer</div>
+        <div class="info-box">
+          <p><strong>Packet Tracer</strong> es una herramienta de simulación de Cisco que permite visualizar cómo viajan los paquetes en una red. En esta práctica, una <strong>PC está conectada a un servidor web</strong> (www.learnip.com — IP: 172.33.100.50) a través de una nube simulada que representa Internet.</p>
+        </div>
+        <div class="steps" style="margin-top:8px;">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-text">Se abre el <strong>Navegador Web</strong> simulado en la PC y se escribe la URL <code style="background:#eee;">www.learnip.com</code>.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text">Se inicia la <strong>captura de tráfico</strong>. Se generan paquetes HTTP que cruzan la internet simulada hacia el servidor web.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-text">El servidor responde y <strong>envía la página web</strong> a la PC. Los paquetes son visibles en la captura con IPs de origen y destino.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-text">Se detiene la captura y se <strong>inspeccionan los paquetes</strong>: se puede ver el protocolo HTTP, la capa de transporte TCP y las direcciones IP.</div>
+          </div>
+        </div>
+        <div class="code">
+          PC0 → [HTTP Request] → Internet → Servidor (172.33.100.50:80)<span class="cursor">_</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10: Lo que muestra Packet Tracer -->
+    <div class="slide" id="slide-10">
+      <div class="slide-header">
+        <span class="slide-num">16.1.4</span>
+        <span class="slide-title">Análisis de Paquetes en Packet Tracer</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">¿Qué podemos observar en los paquetes?</div>
+        <div class="two-col">
+          <div>
+            <div class="info-box">
+              <p>Al examinar un paquete HTTP en Packet Tracer podemos ver:</p>
+            </div>
+            <div class="steps" style="margin-top:8px;">
+              <div class="step">
+                <div class="step-num">🔵</div>
+                <div class="step-text"><strong>Protocolo:</strong> HTTP (solicitud web)</div>
+              </div>
+              <div class="step">
+                <div class="step-num">🔴</div>
+                <div class="step-text"><strong>Transporte:</strong> TCP como protocolo de la capa de transporte</div>
+              </div>
+              <div class="step">
+                <div class="step-num">🟢</div>
+                <div class="step-text"><strong>IP Origen:</strong> Dirección IP de la PC (cliente)</div>
+              </div>
+              <div class="step">
+                <div class="step-num">🟡</div>
+                <div class="step-text"><strong>Formato:</strong> Inicialmente encapsulado como <strong>trama Ethernet</strong></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Flujo observado</div>
+            <div class="flow" style="flex-direction:column; align-items:stretch; gap:4px;">
+              <div class="flow-node" style="text-align:left; padding:6px 10px;">📤 PC0 envía solicitud HTTP → formato Ethernet</div>
+              <div style="text-align:center; color:#003399; font-size:20px;">↓</div>
+              <div class="flow-node" style="text-align:left; padding:6px 10px;">☁️ Paquete cruza la Internet simulada (nube)</div>
+              <div style="text-align:center; color:#003399; font-size:20px;">↓</div>
+              <div class="flow-node" style="text-align:left; padding:6px 10px;">🖥 Servidor acepta solicitud desde PC0</div>
+              <div style="text-align:center; color:#003399; font-size:20px;">↓</div>
+              <div class="flow-node" style="text-align:left; padding:6px 10px;">📥 Respuesta enviada de vuelta → destino: PC0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 11: Packet Tracer Actividad -->
+    <div class="slide" id="slide-11">
+      <div class="slide-header">
+        <span class="slide-num">16.1.5</span>
+        <span class="slide-title">Actividad Packet Tracer — Interacción del Cliente</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">Objetivos y Contexto</div>
+        <div class="two-col">
+          <div class="info-box">
+            <p><strong>Objetivo:</strong> Observar la interacción de clientes entre el servidor y la PC.<br><br>
+            <strong>Red simulada:</strong> Una PC conectada directamente a un servidor configurado con servicios de <strong>DNS + HTTP</strong>. La actividad rastrea el flujo de tráfico cuando se solicita una página web.</p>
+          </div>
+          <div>
+            <div class="section-title">Partes de la actividad</div>
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-text">Ingresar al <strong>Modo de Simulación</strong> (ícono inferior derecho)</div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-text">Configurar <strong>filtros</strong>: solo eventos DNS y HTTP</div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-text">Solicitar <strong>www.ejemplo.com</strong> desde el navegador web simulado</div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Ejecutar simulación</strong> y observar los eventos generados</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 12: Paso a paso actividad PT -->
+    <div class="slide" id="slide-12">
+      <div class="slide-header">
+        <span class="slide-num">16.1.5</span>
+        <span class="slide-title">Eventos Observados en la Simulación</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">¿Qué ocurre cuando se solicita www.ejemplo.com?</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">①</div>
+            <div class="step-text"><strong>Solicitud DNS:</strong> La PC envía una consulta DNS para resolver www.ejemplo.com a una dirección IP.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">②</div>
+            <div class="step-text"><strong>Respuesta DNS:</strong> El servidor proporciona la dirección IP correspondiente al dominio.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">③</div>
+            <div class="step-text"><strong>Solicitud HTTP:</strong> La PC usa la IP obtenida para solicitar la página web al servidor HTTP.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">④</div>
+            <div class="step-text"><strong>Respuesta HTTP (en 2 segmentos):</strong> El servidor envía la página web dividida en segmentos TCP.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">⑤</div>
+            <div class="step-text"><strong>Confirmación ACK:</strong> La PC confirma al servidor que recibió correctamente la página web.</div>
+          </div>
+        </div>
+        <div class="highlight">💡 Al hacer clic en la ventana <strong>PDU Information</strong> de cada evento, se pueden ver los detalles por capas del modelo OSI: Capa de Aplicación (HTTP/DNS), Transporte (TCP), Red (IP), Enlace (Ethernet).</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 13: Resumen de conceptos clave -->
+    <div class="slide" id="slide-13">
+      <div class="slide-header">
+        <span class="slide-num">RESUMEN</span>
+        <span class="slide-title">Conceptos Clave del Módulo 16.1</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">Glosario Esencial</div>
+        <table class="xp-table">
+          <thead><tr><th>Término</th><th>Definición Clave</th></tr></thead>
+          <tbody>
+            <tr><td><strong>🖥 Servidor</strong></td><td>Host que ejecuta software para <strong>proveer</strong> servicios/información a otros hosts en la red.</td></tr>
+            <tr><td><strong>💻 Cliente</strong></td><td>Host que <strong>solicita</strong> servicios a un servidor. Ej: navegador, cliente de correo.</td></tr>
+            <tr><td><strong>🔍 DNS</strong></td><td>Sistema de Nombres de Dominio. Traduce URL (nombre) → Dirección IP (número).</td></tr>
+            <tr><td><strong>🔌 Socket</strong></td><td>Combinación única de IP:Puerto que identifica una conversación de red.</td></tr>
+            <tr><td><strong>🌐 URI</strong></td><td>Identificador Uniforme de Recursos. Identifica cualquier recurso de red.</td></tr>
+            <tr><td><strong>📍 URL</strong></td><td>Localizador de recursos. Define protocolo + host + ruta. Tipo de URI.</td></tr>
+            <tr><td><strong>📛 URN</strong></td><td>Nombre de recurso. Define solo el espacio de nombres, sin protocolo.</td></tr>
+            <tr><td><strong>80 (TCP)</strong></td><td>Puerto estándar donde escucha un servidor HTTP/Web.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SLIDE 14: Resumen visual -->
+    <div class="slide" id="slide-14">
+      <div class="slide-header">
+        <span class="slide-num">RESUMEN</span>
+        <span class="slide-title">Flujo Completo: Del Nombre a la Página Web</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">De la URL a la página: paso a paso completo</div>
+        <div class="flow" style="flex-direction:column; align-items:stretch; gap:5px; padding:12px;">
+          <div class="flow-node">1️⃣ Usuario escribe URL → www.learnip.com</div>
+          <div style="text-align:center;color:#003399;font-size:20px;font-weight:bold;">↓</div>
+          <div class="flow-node">2️⃣ Consulta DNS → Servidor DNS responde con IP (172.16.10.50)</div>
+          <div style="text-align:center;color:#003399;font-size:20px;font-weight:bold;">↓</div>
+          <div class="flow-node">3️⃣ Se establece conexión TCP — Socket: 192.168.10.15:5507 ⇌ 172.16.10.50:80</div>
+          <div style="text-align:center;color:#003399;font-size:20px;font-weight:bold;">↓</div>
+          <div class="flow-node">4️⃣ Cliente envía solicitud HTTP al puerto 80 del servidor</div>
+          <div style="text-align:center;color:#003399;font-size:20px;font-weight:bold;">↓</div>
+          <div class="flow-node">5️⃣ Servidor procesa, formula respuesta y envía la página web</div>
+          <div style="text-align:center;color:#003399;font-size:20px;font-weight:bold;">↓</div>
+          <div class="flow-node" style="background:linear-gradient(135deg,#006600,#009900);">6️⃣ ✅ Navegador recibe y muestra la página web al usuario</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 15: Puntos para el examen -->
+    <div class="slide" id="slide-15">
+      <div class="slide-header">
+        <span class="slide-num">EXAMEN</span>
+        <span class="slide-title">Puntos Importantes para el Examen</span>
+      </div>
+      <div class="slide-body">
+        <div class="section-title">⭐ Lo que debes recordar</div>
+        <div class="two-col">
+          <div>
+            <div class="alert-box">
+              <span class="alert-icon">🎯</span>
+              <span><strong>El puerto 80 (TCP)</strong> es el estándar para servidores web HTTP.</span>
+            </div>
+            <div class="alert-box" style="margin-top:6px;">
+              <span class="alert-icon">🎯</span>
+              <span><strong>DNS</strong> traduce nombre de dominio → IP. Sin DNS, no hay navegación web.</span>
+            </div>
+            <div class="alert-box" style="margin-top:6px;">
+              <span class="alert-icon">🎯</span>
+              <span>Un <strong>socket</strong> = IP origen + puerto origen + IP destino + puerto destino.</span>
+            </div>
+            <div class="alert-box" style="margin-top:6px;">
+              <span class="alert-icon">🎯</span>
+              <span><strong>URL</strong> es un tipo de <strong>URI</strong>. URI es el concepto general; URL y URN son especializaciones.</span>
+            </div>
+          </div>
+          <div>
+            <div class="alert-box">
+              <span class="alert-icon">🎯</span>
+              <span>Una PC puede ejecutar <strong>múltiples clientes</strong> al mismo tiempo (correo + web + chat).</span>
+            </div>
+            <div class="alert-box" style="margin-top:6px;">
+              <span class="alert-icon">🎯</span>
+              <span>Las redes procesan <strong>direcciones IP</strong>, no nombres de dominio.</span>
+            </div>
+            <div class="alert-box" style="margin-top:6px;">
+              <span class="alert-icon">🎯</span>
+              <span>Todos los paquetes de una sesión tienen el <strong>mismo socket</strong> para ser identificados.</span>
+            </div>
+            <div class="alert-box" style="margin-top:6px;">
+              <span class="alert-icon">🎯</span>
+              <span>El servidor web ejecuta en <strong>puerto 80 TCP</strong>; los clientes usan puertos <strong>&gt;1024</strong> aleatorios.</span>
+            </div>
+          </div>
+        </div>
+        <div class="highlight" style="margin-top:8px;">📝 Las interacciones cliente-servidor son posibles gracias a <strong>estándares y protocolos acordados</strong> (HTTP, DNS, TCP/IP). Esta es la base de todo el funcionamiento de Internet.</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 16: OUTRO -->
+    <div class="slide" id="slide-16">
+      <div class="outro-body">
+        <div class="outro-icon">🙌</div>
+        <div class="outro-title">¡Muchas Gracias!</div>
+        <div class="outro-subtitle">Esperamos que la presentación haya sido de utilidad</div>
+        <div class="presenters-box">
+          <div class="presenters-title">👤 Presentado por</div>
+          <div class="presenters-names">Carlos González &nbsp;|&nbsp; Ivana Díaz</div>
+        </div>
+        <div class="xp-badge-row">
+          <span class="xp-chip">📡 Módulo 16.1</span>
+          <span class="xp-chip">🌐 Cliente-Servidor</span>
+          <span class="xp-chip">🔗 URI / URL / URN</span>
+          <span class="xp-chip">🖥 DNS • TCP • HTTP</span>
+        </div>
+        <div style="margin-top:18px; color:#aaccff; font-size:12px; text-align:center;">
+          Redes y Comunicaciones — Cisco Networking Academy
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end slide-container -->
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-left">
+      <div class="status-section" id="status-slide">Diapositiva 1 / 16</div>
+      <div class="status-section" id="status-title">Inicio</div>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:6.25%;"></div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="nav-bar">
+    <button class="nav-btn" id="btn-first" onclick="goToSlide(1)">⏮ Inicio</button>
+    <button class="nav-btn" id="btn-prev" onclick="prevSlide()">◀ Anterior</button>
+    <div class="slide-counter" id="counter">1 / 16</div>
+    <button class="nav-btn" id="btn-next" onclick="nextSlide()">Siguiente ▶</button>
+    <button class="nav-btn" id="btn-last" onclick="goToSlide(16)">Fin ⏭</button>
+  </div>
+
+</div><!-- end window -->
+
+<!-- Taskbar -->
+<div class="taskbar">
+  <div class="start-btn">🪟 Inicio</div>
+  <div class="taskbar-divider"></div>
+  <div class="taskbar-app active">🖥 Cliente-Servidor.ppt — PowerPoint</div>
+  <div class="taskbar-right" id="clock">🕐 00:00</div>
+</div>
+
+<script>
+  let current = 1;
+  const total = 16;
+
+  const titles = [
+    "Inicio — La Relación Cliente-Servidor",
+    "16.1 — La Relación Cliente-Servidor",
+    "16.1.1 — Tipos de Servidores",
+    "16.1.2 — Interacciones de IP",
+    "16.1.2 — DNS y Socket TCP",
+    "16.1.2 — Flujo Completo de Comunicación",
+    "16.1.3 — URI, URN y URL",
+    "16.1.3 — Partes de un URI",
+    "16.1.4 — Tráfico Web en Packet Tracer",
+    "16.1.4 — Análisis de Paquetes",
+    "16.1.5 — Actividad Packet Tracer",
+    "16.1.5 — Eventos de la Simulación",
+    "RESUMEN — Glosario Esencial",
+    "RESUMEN — Flujo Completo",
+    "EXAMEN — Puntos Clave",
+    "Fin — ¡Muchas Gracias!"
+  ];
+
+  function goToSlide(n) {
+    document.getElementById('slide-' + current).classList.remove('active');
+    current = Math.max(1, Math.min(total, n));
+    document.getElementById('slide-' + current).classList.add('active');
+    updateUI();
+  }
+
+  function nextSlide() { goToSlide(current + 1); }
+  function prevSlide() { goToSlide(current - 1); }
+
+  function updateUI() {
+    document.getElementById('counter').textContent = current + ' / ' + total;
+    document.getElementById('status-slide').textContent = 'Diapositiva ' + current + ' / ' + total;
+    document.getElementById('status-title').textContent = titles[current - 1];
+    document.getElementById('progress-fill').style.width = ((current / total) * 100) + '%';
+    document.getElementById('btn-prev').disabled = current === 1;
+    document.getElementById('btn-first').disabled = current === 1;
+    document.getElementById('btn-next').disabled = current === total;
+    document.getElementById('btn-last').disabled = current === total;
+  }
+
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('clock').textContent = '🕐 ' + h + ':' + m;
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prevSlide(); }
+    if (e.key === 'Home') { e.preventDefault(); goToSlide(1); }
+    if (e.key === 'End') { e.preventDefault(); goToSlide(total); }
+  });
+
+  updateUI();
+</script>
+
+</body>
+</html>
